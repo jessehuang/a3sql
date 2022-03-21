@@ -1,0 +1,148 @@
+--1.
+
+USE Northwind
+SELECT c.City
+FROM Customers c
+UNION
+SELECT e.City
+FROM Employees e
+
+--2.
+
+a)
+
+USE Northwind
+SELECT c.City
+FROM Customers c 
+WHERE c.City NOT IN (
+    SELECT e.City
+    FROM Employees e
+)
+
+b)
+
+USE Northwind
+SELECT c.City
+FROM Customers c LEFT JOIN Employees e
+ON c.City = e.City
+WHERE e.City IS NULL
+
+--3.
+
+USE Northwind
+SELECT od.ProductID, SUM(od.Quantity) as [Total Quantity]
+FROM [Order Details] od
+GROUP BY od.ProductID
+
+--4.
+
+USE Northwind
+SELECT c.City, SUM(od.Quantity) as [Total Quantity]
+FROM Customers c INNER JOIN Orders o
+ON c.CustomerID = o.CustomerID
+INNER JOIN [Order Details] od
+ON o.OrderID = od.OrderID
+GROUP BY c.City
+
+--6.
+
+USE Northwind
+SELECT c.City
+FROM Customers c INNER JOIN Orders o
+ON c.CustomerID = o.CustomerID
+INNER JOIN [Order Details] od
+ON o.OrderID = od.OrderID
+GROUP BY c.City
+HAVING COUNT(DISTINCT ProductID) > 1
+
+--7.
+
+USE Northwind
+SELECT DISTINCT c.CustomerID
+FROM Customers c INNER JOIN Orders o
+ON c.CustomerID = o.CustomerID
+INNER JOIN [Order Details] od
+ON o.OrderID = od.OrderID
+WHERE c.City != o.ShipCity
+
+--8.
+
+USE 
+    Northwind
+
+SELECT s.ProductName, s.[Avg Price], s.City
+from
+    (
+SELECT 
+    r.ProductID, r.ProductName, r.[Avg Price], c.City,
+    Rank() over (PARTITION by r.ProductID ORDER BY SUM(od.Quantity) DESC) as ornk
+FROM 
+    (SELECT od.ProductID, p.ProductName, SUM(od.Quantity) as [Total Quantity], AVG(od.UnitPrice) as [Avg Price],
+        RANK() OVER(ORDER By SUM(od.Quantity)) as rnk
+    FROM [Order Details] od join Products p on p.ProductID = od.productID
+    GROUP BY od.ProductID, p.ProductName
+    ) as r
+    join [Order Details] od on od.ProductID = r.ProductID
+    join Orders o on o.OrderID = od.OrderID
+    join Customers c on c.CustomerID = o.CustomerID
+WHERE rnk <= 5
+GROUP BY r.ProductID, r.ProductName, r.[Avg Price], c.City
+) as s
+WHERE ornk = 1
+
+--9.
+
+A.
+
+USE Northwind
+SELECT DISTINCT e.City
+FROM Employees e
+WHERE e.City NOT IN (SELECT c.City
+FROM Customers c 
+JOIN [orders] o ON c.CustomerID = o.CustomerID
+)
+
+b.
+
+USE Northwind
+SELECT Distinct e.City
+FROM Employees e
+LEFT JOIN Customers c on c.City = e.City
+WHERE c.City is null
+
+--10.
+
+USE Northwind
+SELECT e.City
+from 
+    employees e join
+    (SELECT 
+        e.city,
+        Rank() OVER(Order BY SUM(od.quantity) DEsc) as crnk
+    FROM 
+        Employees e
+        join orders o
+        on o.EmployeeID = e.EmployeeID
+        join [Order Details] od
+        on od.OrderID = o.OrderID
+    GROUP BY e.City)
+    as rankedCs on e.City = rankedCs.City
+    join 
+    (SELECT 
+        e.EmployeeID,
+        Rank() OVER(Order BY Count(o.OrderId) DEsc) as ernk
+    FROM 
+        Employees e
+        join orders o
+        on o.EmployeeID = e.EmployeeID
+    GROUP BY e.EmployeeID) 
+    as rankedEs
+    on rankedEs.EmployeeID = e.EmployeeID
+    where crnk = 1 and ernk = 1
+
+--11.
+
+We can use the Row number function, partition over all column names, and the resulting rows where the row number is greater than 1 can be deleted as they are duplicates.
+
+
+
